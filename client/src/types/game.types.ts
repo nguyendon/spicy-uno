@@ -93,6 +93,7 @@ export type GameActionType =
   | 'slap'
   | 'create_custom_rule'
   | 'request_card'    // Player asks another player for a card
+  | 'decline_request' // Asked player refuses to give a card
   | 'offer_card'      // Player offers a card in response to request
   | 'accept_offer'
   | 'decline_offer'
@@ -124,6 +125,7 @@ export type GameEventType =
   | 'speaking_reported'
   | 'custom_rule_created'
   | 'card_requested'
+  | 'request_declined'
   | 'card_offered'
   | 'offer_responded'
   | 'turn_changed'

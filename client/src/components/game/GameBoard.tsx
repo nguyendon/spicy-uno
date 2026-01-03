@@ -31,6 +31,7 @@ export function GameBoard({ onExitGame, aiDifficulty = 'medium' }: GameBoardProp
     slap,
     reportSpeaking,
     requestCard,
+    declineRequest,
     offerCard,
     acceptOffer,
     declineOffer,
@@ -172,6 +173,11 @@ export function GameBoard({ onExitGame, aiDifficulty = 'medium' }: GameBoardProp
   // Respond to a card request by offering a card
   const handleOfferCardResponse = (cardId: string) => {
     offerCard(currentPlayerId, cardId);
+  };
+
+  // Decline to give a card when asked
+  const handleDeclineRequest = () => {
+    declineRequest(currentPlayerId);
   };
 
   const canCallUno = currentPlayer && currentPlayer.hand.length === 2 && !currentPlayer.hasCalledUno && isMyTurn;
@@ -326,6 +332,7 @@ export function GameBoard({ onExitGame, aiDifficulty = 'medium' }: GameBoardProp
           players={gameState.players}
           currentPlayer={currentPlayer}
           onSelectCard={handleOfferCardResponse}
+          onDecline={handleDeclineRequest}
         />
       )}
 

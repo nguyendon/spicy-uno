@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion';
+import { Button } from '../common/Button';
 import type { Player, Card, PendingAction } from '../../types/game.types';
 
 interface RespondToRequestUIProps {
@@ -6,6 +7,7 @@ interface RespondToRequestUIProps {
   players: Player[];
   currentPlayer: Player;
   onSelectCard: (cardId: string) => void;
+  onDecline: () => void;
 }
 
 export function RespondToRequestUI({
@@ -13,6 +15,7 @@ export function RespondToRequestUI({
   players,
   currentPlayer,
   onSelectCard,
+  onDecline,
 }: RespondToRequestUIProps) {
   const requester = players.find((p) => p.id === pendingAction.requesterId);
 
@@ -67,9 +70,14 @@ export function RespondToRequestUI({
           ))}
         </div>
 
-        <p className="text-center text-gray-500 text-sm mt-4">
-          They won't see what card you're offering until they accept
-        </p>
+        <div className="mt-6 flex justify-center gap-4">
+          <p className="text-gray-500 text-sm self-center">
+            They won't see what card until they accept
+          </p>
+          <Button variant="secondary" onClick={onDecline}>
+            Don't Give
+          </Button>
+        </div>
       </motion.div>
     </motion.div>
   );

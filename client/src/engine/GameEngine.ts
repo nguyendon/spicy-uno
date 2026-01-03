@@ -298,6 +298,9 @@ export class GameEngine {
       case 'request_card':
         return this.handleRequestCard(state, action);
 
+      case 'decline_request':
+        return this.handleDeclineRequest(state, action);
+
       case 'offer_card':
         return this.handleOfferCard(state, action);
 
@@ -606,6 +609,23 @@ export class GameEngine {
     });
 
     return newState;
+  }
+
+  // Asked player declines to give a card
+  private handleDeclineRequest(state: GameState, action: GameAction): GameState {
+    if (state.phase !== 'card_request' || !state.pendingAction) return state;
+    if (state.pendingAction.targetPlayer !== action.playerId) return state;
+
+    this.eventBus.emit('request_declined', {
+      requesterId: state.pendingAction.requesterId,
+      declinerId: action.playerId,
+    });
+
+    return {
+      ...state,
+      phase: 'playing',
+      pendingAction: null,
+    };
   }
 
   // Player offers a card in response to a request

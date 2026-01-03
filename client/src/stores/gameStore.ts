@@ -22,6 +22,7 @@ interface GameStore {
   createCustomRule: (playerId: string, text: string, type: 'behavioral' | 'speech' | 'penalty' | 'action') => void;
   reportSpeaking: (playerId: string, targetId: string) => void;
   requestCard: (playerId: string, targetId: string) => void;
+  declineRequest: (playerId: string) => void;
   offerCard: (playerId: string, cardId: string) => void;
   acceptOffer: (playerId: string) => void;
   declineOffer: (playerId: string) => void;
@@ -153,6 +154,16 @@ export const useGameStore = create<GameStore>()(
         type: 'request_card',
         playerId,
         targetPlayerId: targetId,
+      });
+    },
+
+    declineRequest: (playerId) => {
+      const { engine } = get();
+      if (!engine) return;
+
+      engine.dispatch({
+        type: 'decline_request',
+        playerId,
       });
     },
 

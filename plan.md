@@ -24,7 +24,7 @@ Build a web-based Spicy Uno game with impressive graphics, supporting local mult
 | 5 = Slap | Race to slap, last person draws 1 | ✅ Done |
 | Jump-in | Play exact match (color + number) out of turn | ✅ Done |
 | Must say UNO | Penalty for forgetting | ✅ Done |
-| Offer cards | Offer face-down cards to stuck players (bluffing) | ✅ Done |
+| Offer cards | Any player can ask for a face-down card (bluffing) | ✅ Done |
 
 ---
 
