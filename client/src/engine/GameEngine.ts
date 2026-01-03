@@ -295,6 +295,9 @@ export class GameEngine {
       case 'report_speaking':
         return this.handleReportSpeaking(state, action);
 
+      case 'request_card':
+        return this.handleRequestCard(state, action);
+
       case 'offer_card':
         return this.handleOfferCard(state, action);
 
@@ -575,9 +578,47 @@ export class GameEngine {
     return newState;
   }
 
+  // Player requests a card from another player
+  private handleRequestCard(state: GameState, action: GameAction): GameState {
+    if (!this.config.enabledRules.offerCard) return state;
+    if (!action.targetPlayerId) return state;
+
+    // Can't request from yourself
+    if (action.playerId === action.targetPlayerId) return state;
+
+    // Target must have cards to give
+    const target = state.players.find((p) => p.id === action.targetPlayerId);
+    if (!target || target.hand.length === 0) return state;
+
+    const newState: GameState = {
+      ...state,
+      phase: 'card_request',
+      pendingAction: {
+        type: 'card_request',
+        requesterId: action.playerId,
+        targetPlayer: action.targetPlayerId,
+      },
+    };
+
+    this.eventBus.emit('card_requested', {
+      requesterId: action.playerId,
+      targetId: action.targetPlayerId,
+    });
+
+    return newState;
+  }
+
+  // Player offers a card in response to a request
   private handleOfferCard(state: GameState, action: GameAction): GameState {
     if (!this.config.enabledRules.offerCard) return state;
-    if (!action.targetPlayerId || !action.cardId) return state;
+    if (!action.cardId) return state;
+
+    // Must be in card_request phase with this player as the target
+    if (state.phase !== 'card_request' || !state.pendingAction) return state;
+    if (state.pendingAction.targetPlayer !== action.playerId) return state;
+
+    const requesterId = state.pendingAction.requesterId;
+    if (!requesterId) return state;
 
     const newState: GameState = {
       ...state,
@@ -585,15 +626,15 @@ export class GameEngine {
       pendingAction: {
         type: 'offer_decision',
         offererId: action.playerId,
-        targetPlayer: action.targetPlayerId,
+        targetPlayer: requesterId,  // The requester is now the target of the offer
         offeredCardId: action.cardId,
-        deadline: Date.now() + 5000,
+        requesterId: requesterId,
       },
     };
 
     this.eventBus.emit('card_offered', {
       offererId: action.playerId,
-      targetId: action.targetPlayerId,
+      targetId: requesterId,
     });
 
     return newState;

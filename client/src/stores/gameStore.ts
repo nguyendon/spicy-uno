@@ -21,7 +21,8 @@ interface GameStore {
   selectColor: (playerId: string, color: CardColor) => void;
   createCustomRule: (playerId: string, text: string, type: 'behavioral' | 'speech' | 'penalty' | 'action') => void;
   reportSpeaking: (playerId: string, targetId: string) => void;
-  offerCard: (playerId: string, targetId: string, cardId: string) => void;
+  requestCard: (playerId: string, targetId: string) => void;
+  offerCard: (playerId: string, cardId: string) => void;
   acceptOffer: (playerId: string) => void;
   declineOffer: (playerId: string) => void;
   passTurn: (playerId: string) => void;
@@ -144,14 +145,24 @@ export const useGameStore = create<GameStore>()(
       });
     },
 
-    offerCard: (playerId, targetId, cardId) => {
+    requestCard: (playerId, targetId) => {
+      const { engine } = get();
+      if (!engine) return;
+
+      engine.dispatch({
+        type: 'request_card',
+        playerId,
+        targetPlayerId: targetId,
+      });
+    },
+
+    offerCard: (playerId, cardId) => {
       const { engine } = get();
       if (!engine) return;
 
       engine.dispatch({
         type: 'offer_card',
         playerId,
-        targetPlayerId: targetId,
         cardId,
       });
     },

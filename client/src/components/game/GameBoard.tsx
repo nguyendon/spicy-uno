@@ -8,7 +8,8 @@ import { SlapOverlay } from './SlapOverlay';
 import { CustomRuleModal } from './CustomRuleModal';
 import { SilenceReporter } from './SilenceReporter';
 import { OfferCardUI } from './OfferCardUI';
-import { OfferCardSelector } from './OfferCardSelector';
+import { AskForCardModal } from './AskForCardModal';
+import { RespondToRequestUI } from './RespondToRequestUI';
 import { PassDeviceScreen } from './PassDeviceScreen';
 import type { CardColor } from '../../types/game.types';
 import type { AIDifficulty } from '../../ai/AIPlayer';
@@ -29,16 +30,17 @@ export function GameBoard({ onExitGame, aiDifficulty = 'medium' }: GameBoardProp
     createCustomRule,
     slap,
     reportSpeaking,
+    requestCard,
+    offerCard,
     acceptOffer,
     declineOffer,
-    offerCard,
   } = useGameStore();
 
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [pendingCardId, setPendingCardId] = useState<string | null>(null);
   const [showPassDevice, setShowPassDevice] = useState(false);
   const [viewingPlayerId, setViewingPlayerId] = useState<string | null>(null);
-  const [showOfferSelector, setShowOfferSelector] = useState(false);
+  const [showAskModal, setShowAskModal] = useState(false);
   const lastTurnIndexRef = useRef<number>(-1);
 
   // Determine if this is an AI game or local multiplayer
@@ -161,15 +163,23 @@ export function GameBoard({ onExitGame, aiDifficulty = 'medium' }: GameBoardProp
     declineOffer(currentPlayerId);
   };
 
-  const handleOfferCardSelect = (cardId: string, targetPlayerId: string) => {
-    offerCard(currentPlayerId, targetPlayerId, cardId);
-    setShowOfferSelector(false);
+  // Request a card from another player
+  const handleRequestCard = (targetPlayerId: string) => {
+    requestCard(currentPlayerId, targetPlayerId);
+    setShowAskModal(false);
+  };
+
+  // Respond to a card request by offering a card
+  const handleOfferCardResponse = (cardId: string) => {
+    offerCard(currentPlayerId, cardId);
   };
 
   const canCallUno = currentPlayer && currentPlayer.hand.length === 2 && !currentPlayer.hasCalledUno && isMyTurn;
 
-  // Get stuck players for offer card feature
-  const stuckPlayers = engine.getStuckPlayers(currentPlayerId);
+  // Check if current player is being asked for a card
+  const isBeingAskedForCard =
+    gameState.phase === 'card_request' &&
+    gameState.pendingAction?.targetPlayer === currentPlayerId;
 
   // Show pass device screen for local multiplayer
   if (showPassDevice && isLocalMultiplayer) {
@@ -258,14 +268,14 @@ export function GameBoard({ onExitGame, aiDifficulty = 'medium' }: GameBoardProp
           </Button>
         )}
 
-        {/* Offer Card button - only show if there are stuck players and it's player's turn */}
-        {isMyTurn && stuckPlayers.length > 0 && activePlayer.type !== 'ai' && (
+        {/* Ask for Card button - any player can ask anytime */}
+        {activePlayer.type !== 'ai' && (
           <Button
             variant="primary"
             size="lg"
-            onClick={() => setShowOfferSelector(true)}
+            onClick={() => setShowAskModal(true)}
           >
-            Offer Card
+            Ask for Card
           </Button>
         )}
       </div>
@@ -300,14 +310,22 @@ export function GameBoard({ onExitGame, aiDifficulty = 'medium' }: GameBoardProp
         />
       )}
 
-      {/* Offer card selector */}
-      {currentPlayer && (
-        <OfferCardSelector
-          isOpen={showOfferSelector}
+      {/* Ask for Card modal */}
+      <AskForCardModal
+        isOpen={showAskModal}
+        currentPlayerId={currentPlayerId}
+        players={gameState.players}
+        onSelectPlayer={handleRequestCard}
+        onCancel={() => setShowAskModal(false)}
+      />
+
+      {/* Respond to card request UI */}
+      {isBeingAskedForCard && currentPlayer && gameState.pendingAction && (
+        <RespondToRequestUI
+          pendingAction={gameState.pendingAction}
+          players={gameState.players}
           currentPlayer={currentPlayer}
-          stuckPlayers={stuckPlayers}
-          onSelectCardAndPlayer={handleOfferCardSelect}
-          onCancel={() => setShowOfferSelector(false)}
+          onSelectCard={handleOfferCardResponse}
         />
       )}
 

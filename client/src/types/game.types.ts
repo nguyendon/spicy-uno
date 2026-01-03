@@ -32,7 +32,8 @@ export type GamePhase =
   | 'color_selection'
   | 'slap_race'
   | 'custom_rule_creation'
-  | 'offering_card'
+  | 'card_request'      // Someone is being asked for a card
+  | 'offering_card'     // Requester deciding to accept/decline
   | 'game_over';
 
 // Pending action types
@@ -41,11 +42,13 @@ export type PendingActionType =
   | 'slap'
   | 'select_color'
   | 'create_rule'
-  | 'offer_decision';
+  | 'card_request'      // Someone is asking for a card
+  | 'offer_decision';   // Requester deciding to accept/decline
 
 export interface PendingAction {
   type: PendingActionType;
-  targetPlayer?: string;
+  targetPlayer?: string;   // Player being asked for a card (the giver)
+  requesterId?: string;    // Player who asked for a card
   amount?: number;
   deadline?: number;
   offeredCardId?: string;
@@ -89,7 +92,8 @@ export type GameActionType =
   | 'catch_uno'
   | 'slap'
   | 'create_custom_rule'
-  | 'offer_card'
+  | 'request_card'    // Player asks another player for a card
+  | 'offer_card'      // Player offers a card in response to request
   | 'accept_offer'
   | 'decline_offer'
   | 'report_speaking'
@@ -119,6 +123,7 @@ export type GameEventType =
   | 'silence_toggled'
   | 'speaking_reported'
   | 'custom_rule_created'
+  | 'card_requested'
   | 'card_offered'
   | 'offer_responded'
   | 'turn_changed'
