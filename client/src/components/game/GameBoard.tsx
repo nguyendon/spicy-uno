@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { GameCanvas } from '../../graphics/GameCanvas';
 import { useGameStore } from '../../stores/gameStore';
 import { useAIPlayers } from '../../hooks/useAIPlayers';
@@ -8,6 +8,7 @@ import { SlapOverlay } from './SlapOverlay';
 import { CustomRuleModal } from './CustomRuleModal';
 import { SilenceReporter } from './SilenceReporter';
 import { OfferCardUI } from './OfferCardUI';
+import { PassDeviceScreen } from './PassDeviceScreen';
 import type { CardColor } from '../../types/game.types';
 import type { AIDifficulty } from '../../ai/AIPlayer';
 
@@ -33,99 +34,141 @@ export function GameBoard({ onExitGame, aiDifficulty = 'medium' }: GameBoardProp
 
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [pendingCardId, setPendingCardId] = useState<string | null>(null);
+  const [showPassDevice, setShowPassDevice] = useState(false);
+  const [viewingPlayerId, setViewingPlayerId] = useState<string | null>(null);
+  const lastTurnIndexRef = useRef<number>(-1);
+
+  // Determine if this is an AI game or local multiplayer
+  const hasAIPlayers = gameState?.players.some((p) => p.type === 'ai') ?? false;
+  const isLocalMultiplayer = !hasAIPlayers;
 
   // Initialize AI players
-  const hasAIPlayers = gameState?.players.some((p) => p.type === 'ai') ?? false;
   useAIPlayers({
     enabled: hasAIPlayers,
     difficulty: aiDifficulty,
   });
 
+  // Set initial viewing player
+  useEffect(() => {
+    if (gameState && !viewingPlayerId) {
+      if (hasAIPlayers) {
+        // In AI mode, always view as the human player (first one)
+        const humanPlayer = gameState.players.find((p) => p.type === 'human');
+        setViewingPlayerId(humanPlayer?.id ?? gameState.players[0].id);
+      } else {
+        // In local multiplayer, view as the current turn player
+        setViewingPlayerId(gameState.players[gameState.currentPlayerIndex].id);
+      }
+      lastTurnIndexRef.current = gameState.currentPlayerIndex;
+    }
+  }, [gameState, viewingPlayerId, hasAIPlayers]);
+
+  // Handle turn changes for local multiplayer
+  useEffect(() => {
+    if (!gameState || !isLocalMultiplayer) return;
+    if (gameState.phase === 'game_over') return;
+
+    // Detect turn change
+    if (lastTurnIndexRef.current !== -1 &&
+        lastTurnIndexRef.current !== gameState.currentPlayerIndex) {
+      // Turn changed - show pass device screen
+      setShowPassDevice(true);
+    }
+    lastTurnIndexRef.current = gameState.currentPlayerIndex;
+  }, [gameState?.currentPlayerIndex, isLocalMultiplayer, gameState?.phase]);
+
+  const handlePassDeviceReady = useCallback(() => {
+    if (!gameState) return;
+    setViewingPlayerId(gameState.players[gameState.currentPlayerIndex].id);
+    setShowPassDevice(false);
+  }, [gameState]);
+
   if (!gameState || !engine) {
     return <div className="text-white">Loading...</div>;
   }
 
-  // Get current player (first human player for now)
-  const currentPlayerId = gameState.players[0].id;
+  // Current viewing player
+  const currentPlayerId = viewingPlayerId ?? gameState.players[0].id;
   const currentPlayer = gameState.players.find((p) => p.id === currentPlayerId);
-  const isMyTurn = gameState.players[gameState.currentPlayerIndex].id === currentPlayerId;
+  const activePlayer = gameState.players[gameState.currentPlayerIndex];
+  const isMyTurn = activePlayer.id === currentPlayerId;
 
-  // Get valid moves
+  // Get valid moves for the viewing player
   const validMoves = engine.getValidMoves(currentPlayerId);
   const validMoveIds = validMoves.map((c) => c.id);
 
-  const handleCardClick = useCallback(
-    (cardId: string) => {
-      if (!isMyTurn) return;
-
-      const card = currentPlayer?.hand.find((c) => c.id === cardId);
-      if (!card) return;
-
-      // Check if it's a valid move
-      if (!validMoveIds.includes(cardId)) return;
-
-      // If it's a wild card, show color picker
-      if (card.color === 'wild') {
-        setPendingCardId(cardId);
-        setShowColorPicker(true);
-        return;
-      }
-
-      // Play the card
-      playCard(currentPlayerId, cardId);
-    },
-    [isMyTurn, currentPlayer, validMoveIds, playCard, currentPlayerId]
-  );
-
-  const handleDeckClick = useCallback(() => {
+  const handleCardClick = (cardId: string) => {
     if (!isMyTurn) return;
+    if (activePlayer.type === 'ai') return; // Don't let human play for AI
+
+    const card = currentPlayer?.hand.find((c) => c.id === cardId);
+    if (!card) return;
+
+    // Check if it's a valid move
+    if (!validMoveIds.includes(cardId)) return;
+
+    // If it's a wild card, show color picker
+    if (card.color === 'wild') {
+      setPendingCardId(cardId);
+      setShowColorPicker(true);
+      return;
+    }
+
+    // Play the card
+    playCard(currentPlayerId, cardId);
+  };
+
+  const handleDeckClick = () => {
+    if (!isMyTurn) return;
+    if (activePlayer.type === 'ai') return;
     drawCard(currentPlayerId);
-  }, [isMyTurn, drawCard, currentPlayerId]);
+  };
 
-  const handleColorSelect = useCallback(
-    (color: CardColor) => {
-      if (pendingCardId) {
-        playCard(currentPlayerId, pendingCardId, color);
-        setPendingCardId(null);
-      } else if (gameState.phase === 'color_selection') {
-        selectColor(currentPlayerId, color);
-      }
-      setShowColorPicker(false);
-    },
-    [pendingCardId, gameState.phase, playCard, selectColor, currentPlayerId]
-  );
+  const handleColorSelect = (color: CardColor) => {
+    if (pendingCardId) {
+      playCard(currentPlayerId, pendingCardId, color);
+      setPendingCardId(null);
+    } else if (gameState.phase === 'color_selection') {
+      selectColor(currentPlayerId, color);
+    }
+    setShowColorPicker(false);
+  };
 
-  const handleCallUno = useCallback(() => {
+  const handleCallUno = () => {
     callUno(currentPlayerId);
-  }, [callUno, currentPlayerId]);
+  };
 
-  const handleSlap = useCallback(() => {
+  const handleSlap = () => {
     slap(currentPlayerId, Date.now());
-  }, [slap, currentPlayerId]);
+  };
 
-  const handleCreateRule = useCallback(
-    (text: string, type: 'behavioral' | 'speech' | 'penalty' | 'action') => {
-      createCustomRule(currentPlayerId, text, type);
-    },
-    [createCustomRule, currentPlayerId]
-  );
+  const handleCreateRule = (text: string, type: 'behavioral' | 'speech' | 'penalty' | 'action') => {
+    createCustomRule(currentPlayerId, text, type);
+  };
 
-  const handleReportSpeaking = useCallback(
-    (targetId: string) => {
-      reportSpeaking(currentPlayerId, targetId);
-    },
-    [reportSpeaking, currentPlayerId]
-  );
+  const handleReportSpeaking = (targetId: string) => {
+    reportSpeaking(currentPlayerId, targetId);
+  };
 
-  const handleAcceptOffer = useCallback(() => {
+  const handleAcceptOffer = () => {
     acceptOffer(currentPlayerId);
-  }, [acceptOffer, currentPlayerId]);
+  };
 
-  const handleDeclineOffer = useCallback(() => {
+  const handleDeclineOffer = () => {
     declineOffer(currentPlayerId);
-  }, [declineOffer, currentPlayerId]);
+  };
 
-  const canCallUno = currentPlayer && currentPlayer.hand.length === 2 && !currentPlayer.hasCalledUno;
+  const canCallUno = currentPlayer && currentPlayer.hand.length === 2 && !currentPlayer.hasCalledUno && isMyTurn;
+
+  // Show pass device screen for local multiplayer
+  if (showPassDevice && isLocalMultiplayer) {
+    return (
+      <PassDeviceScreen
+        nextPlayer={activePlayer}
+        onReady={handlePassDeviceReady}
+      />
+    );
+  }
 
   return (
     <div className="h-screen w-screen bg-gray-900 flex flex-col">
@@ -138,17 +181,30 @@ export function GameBoard({ onExitGame, aiDifficulty = 'medium' }: GameBoardProp
               SILENCE MODE
             </div>
           )}
+          {hasAIPlayers && !isMyTurn && (
+            <div className="bg-blue-600 px-3 py-1 rounded-full text-white text-sm font-medium">
+              AI is thinking...
+            </div>
+          )}
         </div>
 
         <div className="flex items-center gap-4">
+          {/* Turn indicator */}
+          <div className="text-gray-300 text-sm">
+            {isMyTurn ? (
+              <span className="text-green-400 font-medium">Your turn!</span>
+            ) : (
+              <span>{activePlayer.name}'s turn</span>
+            )}
+          </div>
           {/* Custom rules display */}
           {gameState.customRules.length > 0 && (
             <div className="text-gray-400 text-sm">
-              {gameState.customRules.length} custom rule(s) active
+              {gameState.customRules.length} custom rule(s)
             </div>
           )}
           <Button variant="secondary" size="sm" onClick={onExitGame}>
-            Exit Game
+            Exit
           </Button>
         </div>
       </div>
@@ -160,7 +216,7 @@ export function GameBoard({ onExitGame, aiDifficulty = 'medium' }: GameBoardProp
           currentPlayerId={currentPlayerId}
           onCardClick={handleCardClick}
           onDeckClick={handleDeckClick}
-          validMoves={validMoveIds}
+          validMoves={isMyTurn ? validMoveIds : []}
         />
       </div>
 
@@ -170,7 +226,7 @@ export function GameBoard({ onExitGame, aiDifficulty = 'medium' }: GameBoardProp
           variant="secondary"
           size="lg"
           onClick={handleDeckClick}
-          disabled={!isMyTurn}
+          disabled={!isMyTurn || activePlayer.type === 'ai'}
         >
           Draw Card
         </Button>
@@ -180,7 +236,7 @@ export function GameBoard({ onExitGame, aiDifficulty = 'medium' }: GameBoardProp
           size="lg"
           onClick={handleCallUno}
           disabled={!canCallUno}
-          className="animate-pulse"
+          className={canCallUno ? 'animate-pulse' : ''}
         >
           UNO!
         </Button>
