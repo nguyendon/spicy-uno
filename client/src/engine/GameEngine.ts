@@ -139,6 +139,20 @@ export class GameEngine {
     return isExactMatch(card, this.getTopCard());
   }
 
+  // Get players who have no valid moves (for offer card feature)
+  getStuckPlayers(excludePlayerId?: string): Player[] {
+    if (!this.config.enabledRules.offerCard) return [];
+
+    return this.state.players.filter((player) => {
+      // Exclude the specified player (usually the one offering)
+      if (excludePlayerId && player.id === excludePlayerId) return false;
+
+      // Check if they have no valid moves
+      const validMoves = this.getValidMoves(player.id);
+      return validMoves.length === 0;
+    });
+  }
+
   // Event handling
   on<T = unknown>(event: GameEventType, handler: (payload: T) => void): () => void {
     return this.eventBus.on(event, handler);

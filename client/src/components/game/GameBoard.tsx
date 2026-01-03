@@ -8,6 +8,7 @@ import { SlapOverlay } from './SlapOverlay';
 import { CustomRuleModal } from './CustomRuleModal';
 import { SilenceReporter } from './SilenceReporter';
 import { OfferCardUI } from './OfferCardUI';
+import { OfferCardSelector } from './OfferCardSelector';
 import { PassDeviceScreen } from './PassDeviceScreen';
 import type { CardColor } from '../../types/game.types';
 import type { AIDifficulty } from '../../ai/AIPlayer';
@@ -30,12 +31,14 @@ export function GameBoard({ onExitGame, aiDifficulty = 'medium' }: GameBoardProp
     reportSpeaking,
     acceptOffer,
     declineOffer,
+    offerCard,
   } = useGameStore();
 
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [pendingCardId, setPendingCardId] = useState<string | null>(null);
   const [showPassDevice, setShowPassDevice] = useState(false);
   const [viewingPlayerId, setViewingPlayerId] = useState<string | null>(null);
+  const [showOfferSelector, setShowOfferSelector] = useState(false);
   const lastTurnIndexRef = useRef<number>(-1);
 
   // Determine if this is an AI game or local multiplayer
@@ -158,7 +161,15 @@ export function GameBoard({ onExitGame, aiDifficulty = 'medium' }: GameBoardProp
     declineOffer(currentPlayerId);
   };
 
+  const handleOfferCardSelect = (cardId: string, targetPlayerId: string) => {
+    offerCard(currentPlayerId, targetPlayerId, cardId);
+    setShowOfferSelector(false);
+  };
+
   const canCallUno = currentPlayer && currentPlayer.hand.length === 2 && !currentPlayer.hasCalledUno && isMyTurn;
+
+  // Get stuck players for offer card feature
+  const stuckPlayers = engine.getStuckPlayers(currentPlayerId);
 
   // Show pass device screen for local multiplayer
   if (showPassDevice && isLocalMultiplayer) {
@@ -246,6 +257,17 @@ export function GameBoard({ onExitGame, aiDifficulty = 'medium' }: GameBoardProp
             SLAP!
           </Button>
         )}
+
+        {/* Offer Card button - only show if there are stuck players and it's player's turn */}
+        {isMyTurn && stuckPlayers.length > 0 && activePlayer.type !== 'ai' && (
+          <Button
+            variant="primary"
+            size="lg"
+            onClick={() => setShowOfferSelector(true)}
+          >
+            Offer Card
+          </Button>
+        )}
       </div>
 
       {/* Overlays */}
@@ -275,6 +297,17 @@ export function GameBoard({ onExitGame, aiDifficulty = 'medium' }: GameBoardProp
           currentPlayerId={currentPlayerId}
           onAccept={handleAcceptOffer}
           onDecline={handleDeclineOffer}
+        />
+      )}
+
+      {/* Offer card selector */}
+      {currentPlayer && (
+        <OfferCardSelector
+          isOpen={showOfferSelector}
+          currentPlayer={currentPlayer}
+          stuckPlayers={stuckPlayers}
+          onSelectCardAndPlayer={handleOfferCardSelect}
+          onCancel={() => setShowOfferSelector(false)}
         />
       )}
 
