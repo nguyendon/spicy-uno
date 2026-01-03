@@ -1,17 +1,22 @@
 import { useState, useCallback } from 'react';
 import { GameCanvas } from '../../graphics/GameCanvas';
 import { useGameStore } from '../../stores/gameStore';
+import { useAIPlayers } from '../../hooks/useAIPlayers';
 import { Button } from '../common/Button';
 import { ColorPicker } from './ColorPicker';
 import { SlapOverlay } from './SlapOverlay';
 import { CustomRuleModal } from './CustomRuleModal';
+import { SilenceReporter } from './SilenceReporter';
+import { OfferCardUI } from './OfferCardUI';
 import type { CardColor } from '../../types/game.types';
+import type { AIDifficulty } from '../../ai/AIPlayer';
 
 interface GameBoardProps {
   onExitGame: () => void;
+  aiDifficulty?: AIDifficulty;
 }
 
-export function GameBoard({ onExitGame }: GameBoardProps) {
+export function GameBoard({ onExitGame, aiDifficulty = 'medium' }: GameBoardProps) {
   const {
     gameState,
     engine,
@@ -21,10 +26,20 @@ export function GameBoard({ onExitGame }: GameBoardProps) {
     selectColor,
     createCustomRule,
     slap,
+    reportSpeaking,
+    acceptOffer,
+    declineOffer,
   } = useGameStore();
 
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [pendingCardId, setPendingCardId] = useState<string | null>(null);
+
+  // Initialize AI players
+  const hasAIPlayers = gameState?.players.some((p) => p.type === 'ai') ?? false;
+  useAIPlayers({
+    enabled: hasAIPlayers,
+    difficulty: aiDifficulty,
+  });
 
   if (!gameState || !engine) {
     return <div className="text-white">Loading...</div>;
@@ -94,6 +109,21 @@ export function GameBoard({ onExitGame }: GameBoardProps) {
     },
     [createCustomRule, currentPlayerId]
   );
+
+  const handleReportSpeaking = useCallback(
+    (targetId: string) => {
+      reportSpeaking(currentPlayerId, targetId);
+    },
+    [reportSpeaking, currentPlayerId]
+  );
+
+  const handleAcceptOffer = useCallback(() => {
+    acceptOffer(currentPlayerId);
+  }, [acceptOffer, currentPlayerId]);
+
+  const handleDeclineOffer = useCallback(() => {
+    declineOffer(currentPlayerId);
+  }, [declineOffer, currentPlayerId]);
 
   const canCallUno = currentPlayer && currentPlayer.hand.length === 2 && !currentPlayer.hasCalledUno;
 
@@ -171,6 +201,25 @@ export function GameBoard({ onExitGame }: GameBoardProps) {
 
       {gameState.phase === 'custom_rule_creation' && (
         <CustomRuleModal onSubmit={handleCreateRule} />
+      )}
+
+      {/* Silence mode reporter */}
+      <SilenceReporter
+        active={gameState.silenceMode}
+        players={gameState.players}
+        currentPlayerId={currentPlayerId}
+        onReport={handleReportSpeaking}
+      />
+
+      {/* Offer card UI */}
+      {gameState.phase === 'offering_card' && gameState.pendingAction && (
+        <OfferCardUI
+          pendingAction={gameState.pendingAction}
+          players={gameState.players}
+          currentPlayerId={currentPlayerId}
+          onAccept={handleAcceptOffer}
+          onDecline={handleDeclineOffer}
+        />
       )}
 
       {/* Game over overlay */}
