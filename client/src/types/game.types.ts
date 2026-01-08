@@ -82,6 +82,7 @@ export interface GameState {
   turnStartTime: number;
   winner: string | null;
   lastAction: GameAction | null;
+  selectedWildColor?: CardColor | null;  // For online mode
 }
 
 // Game actions

@@ -4,9 +4,10 @@ import type { GameConfig } from '../../types/game.types';
 
 interface MainMenuProps {
   onStartGame: (config: GameConfig) => void;
+  onOnlinePlay?: () => void;
 }
 
-export function MainMenu({ onStartGame }: MainMenuProps) {
+export function MainMenu({ onStartGame, onOnlinePlay }: MainMenuProps) {
   const [playerCount, setPlayerCount] = useState(2);
   const [playerNames, setPlayerNames] = useState(['Player 1', 'Player 2', 'Player 3', 'Player 4']);
   const [gameMode, setGameMode] = useState<'local' | 'ai'>('local');
@@ -61,7 +62,7 @@ export function MainMenu({ onStartGame }: MainMenuProps) {
               }`}
               onClick={() => setGameMode('local')}
             >
-              Local Multiplayer
+              Local
             </button>
             <button
               className={`flex-1 py-3 px-4 rounded-lg font-medium transition-all ${
@@ -73,6 +74,14 @@ export function MainMenu({ onStartGame }: MainMenuProps) {
             >
               vs AI
             </button>
+            {onOnlinePlay && (
+              <button
+                className="flex-1 py-3 px-4 rounded-lg font-medium transition-all bg-purple-600 text-white hover:bg-purple-500"
+                onClick={onOnlinePlay}
+              >
+                Online
+              </button>
+            )}
           </div>
         </div>
 
