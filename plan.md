@@ -11,7 +11,7 @@ Build a web-based Spicy Uno game with impressive graphics, supporting local mult
 | State | Zustand + Immer | ✅ Done |
 | Graphics | Canvas 2D + React overlays | ✅ Done |
 | Animation | Framer Motion | ✅ Done |
-| Backend | Node.js + Express + Socket.IO | ⏳ Pending |
+| Backend | Node.js + Express + Socket.IO | ✅ Done |
 | Styling | Tailwind CSS v4 | ✅ Done |
 
 ## Spicy Rules
@@ -86,16 +86,17 @@ Build a web-based Spicy Uno game with impressive graphics, supporting local mult
 - [ ] Add background music (optional, toggleable)
 - [ ] Add volume controls
 
-### Phase 6: Online Multiplayer
-- [ ] Set up Node.js + Express server
-- [ ] Integrate Socket.IO
-- [ ] Implement room system (create/join/browse)
-- [ ] Server-authoritative game state
-- [ ] State synchronization
-- [ ] Latency compensation for slap races
-- [ ] Reconnection handling
-- [ ] Player ready system
-- [ ] Host controls
+### Phase 6: Online Multiplayer ✅ COMPLETE (LAN)
+- [x] Set up Node.js + Express server
+- [x] Integrate Socket.IO
+- [x] Implement room system (create/join with codes)
+- [x] Server-authoritative game state
+- [x] State synchronization
+- [x] Player ready system
+- [x] Host controls (rule configuration)
+- [ ] Latency compensation for slap races (future)
+- [ ] Reconnection handling (future)
+- [ ] Public server deployment (future)
 
 ### Phase 7: Polish & Launch
 - [ ] Settings panel (rules toggle, audio, graphics quality)
@@ -126,9 +127,13 @@ spicy-uno/
 │   │   │   │   ├── CustomRuleModal.tsx # Create house rules ✅
 │   │   │   │   ├── SilenceReporter.tsx # Report speaking ✅
 │   │   │   │   ├── OfferCardUI.tsx  # Card offering UI ✅
-│   │   │   │   └── PassDeviceScreen.tsx # Hot-seat turn switch ✅
+│   │   │   │   ├── PassDeviceScreen.tsx # Hot-seat turn switch ✅
+│   │   │   │   └── OnlineGameBoard.tsx # Online multiplayer game ✅
 │   │   │   └── lobby/
-│   │   │       └── MainMenu.tsx     # Game setup ✅
+│   │   │       ├── MainMenu.tsx     # Game setup ✅
+│   │   │       └── OnlineLobby.tsx  # Online room lobby ✅
+│   │   ├── multiplayer/
+│   │   │   └── socketService.ts     # Socket.IO client ✅
 │   │   ├── engine/
 │   │   │   ├── CardDeck.ts          # Deck management ✅
 │   │   │   ├── EventBus.ts          # Event system ✅
@@ -151,14 +156,11 @@ spicy-uno/
 │   ├── package.json
 │   └── vite.config.ts
 │
-├── server/                          # Node.js backend (Phase 6)
+├── server/                          # Node.js backend ✅
+│   ├── package.json
+│   ├── tsconfig.json
 │   └── src/
-│       ├── index.ts                 # Server entry
-│       ├── socket/
-│       │   ├── SocketHandler.ts     # Connection management
-│       │   └── GameHandler.ts       # Game action handlers
-│       └── game/
-│           └── ServerGameEngine.ts  # Authoritative game state
+│       └── index.ts                 # Socket.IO server with game logic
 │
 └── plan.md                          # This file
 ```
@@ -181,13 +183,28 @@ spicy-uno/
 
 ## Running the Game
 
+### Local/AI Mode
 ```bash
 cd client
 npm install
 npm run dev
 ```
-
 Open http://localhost:5173
+
+### Online Multiplayer (LAN)
+```bash
+# Terminal 1 - Server
+cd server
+npm install
+npm run dev
+
+# Terminal 2 - Client (expose to LAN)
+cd client
+npm run dev -- --host
+```
+1. Find your IP: `ipconfig` (Windows) or `ifconfig` (Mac)
+2. Share `http://YOUR_IP:5173` with friends on your network
+3. Click "Online" → Create room or Join with code
 
 ---
 
